@@ -1,5 +1,5 @@
 CREATE TABLE books (
-    id TEXT PRIMARY KEY, -- can change to be integer if you want
+    id INTEGER PRIMARY KEY, -- can change to be integer if you want
     author_id TEXT,
     title TEXT,
     pub_year TEXT,

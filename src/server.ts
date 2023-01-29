@@ -26,6 +26,7 @@ await db.get("PRAGMA foreign_keys = ON");
 //
 
 // insert example
+
 await db.run(
     "INSERT INTO authors(id, name, bio) VALUES('1', 'Figginsworth III', 'A traveling gentleman.')"
 );
@@ -33,6 +34,7 @@ await db.run(
     "INSERT INTO books(id, author_id, title, pub_year, genre) VALUES ('1', '1', 'My Fairest Lady', '1866', 'romance')"
 );
 
+/*
 // insert example with parameterized queries
 // important to use parameterized queries to prevent SQL injection
 // when inserting untrusted data
@@ -41,11 +43,11 @@ let statement = await db.prepare(
 );
 await statement.bind(["2", "1", "A Travelogue of Tales", "1867", "adventure"]);
 await statement.run();
-
+*/
 // select examples
 let authors = await db.all("SELECT * FROM authors");
 console.log("Authors", authors);
-let books = await db.all("SELECT * FROM books WHERE author_id = '1'");
+let books = await db.all("SELECT * FROM books WHERE id = '1'");
 console.log("Books", books);
 let filteredBooks = await db.all("SELECT * FROM books WHERE pub_year = '1867'");
 
@@ -59,27 +61,111 @@ console.log("Some books", filteredBooks);
 interface Foo {
     message: string;
 }
+
 interface Error {
     error: string;
 }
 type FooResponse = Response<Foo | Error>;
 // res's type limits what responses this request handler can send
 // it must send either an object with a message or an error
-app.get("/foo", (req, res: FooResponse) => {
-    if (!req.query.bar) {
-        return res.status(400).json({ error: "bar is required" });
+app.get("/books", async (req, res) => {
+    const {id, title, author, genre, pub_year} = req.query;
+    let query = "SELECT * FROM books";
+    let filters = [];
+    console.log(req.query);
+
+    if (id){
+        query += ` WHERE id = ?`;
+        filters.push(id)
     }
-    return res.json({ message: `You sent: ${req.query.bar} in the query` });
-});
-app.post("/foo", (req, res: FooResponse) => {
-    if (!req.body.bar) {
-        return res.status(400).json({ error: "bar is required" });
+    else{
+        if (title){
+            query += " WHERE title = ?";
+            filters.push(title);
+        }
+    
+        if (author){
+            if (filters.length > 0){
+                query += " AND ";
+            }
+            else{
+                query += " WHERE ";
+            }
+            query += " author_id = (SELECT id from authors WHERE name = ?)";
+            filters.push(author);
+        }
+    
+        if (genre){
+            if (filters.length > 0){
+                query += " AND ";
+            }
+            else{
+                query += " WHERE ";
+            }
+    
+            query += " genre = ?";
+            filters.push(genre)
+        }
+
+        if (pub_year){
+            if (filters.length > 0){
+                query += " AND ";
+            }
+            else{
+                query += " WHERE ";
+            }
+            query += " pub_year = ?";
+            filters.push(pub_year);
+        }
     }
-    return res.json({ message: `You sent: ${req.body.bar} in the body` });
+    console.log(query);
+
+    try{
+        let val = await db.all(query, filters);
+        res.json({response: val});
+    }
+    catch (err){
+        return res.json({message: "Query unsuccesful"});
+    }
 });
+
+
+app.post("/books", async (req, res: Response) =>{
+    const {title, author_id, genre, pub_year} = req.body;
+    let vals = [author_id, title, pub_year, genre];
+    let statement = await db.prepare(
+        "INSERT INTO books(author_id, title, pub_year, genre) VALUES (?, ?, ?, ?)"
+    );
+
+    try{
+        await statement.bind(vals);
+        let val = await statement.run();
+        let newId = val.lastID;
+        let books = await db.all("SELECT * FROM books");
+        console.log("Books", books);
+        return res.json({response: books, id: newId});
+    }
+    catch (err){
+        return res.json({message: "Query unsuccesful"});
+    }
+});
+
 app.delete("/foo", (req, res) => {
     // etc.
     res.sendStatus(200);
+});
+
+app.delete("/books/:id", async (req, res: Response) => {
+    try{
+        let id = req.params.id;
+        await db.run(`DELETE FROM books WHERE id = '${id}'`);
+        let books = await db.all("SELECT * FROM books");
+        console.log("Books", books);
+        return res.json({response: books});
+    }
+    catch (err){
+        return res.json({message: "Entry could not be deleted"});
+    }
 });
 
 //
