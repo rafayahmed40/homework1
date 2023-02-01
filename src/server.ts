@@ -5,6 +5,7 @@ import * as url from "url";
 
 let app = express();
 app.use(express.json());
+app.use(express.static("public"));
 
 // create database "connection"
 // use absolute path to avoid this issue
@@ -26,12 +27,11 @@ await db.get("PRAGMA foreign_keys = ON");
 //
 
 // insert example
-
 await db.run(
     "INSERT INTO authors(id, name, bio) VALUES('1', 'Figginsworth III', 'A traveling gentleman.')"
 );
 await db.run(
-    "INSERT INTO books(id, author_id, title, pub_year, genre) VALUES ('1', '1', 'My Fairest Lady', '1866', 'romance')"
+    "INSERT INTO books(author_id, title, pub_year, genre) VALUES ('1', 'My Fairest Lady', '1866', 'romance')"
 );
 
 /*
@@ -68,7 +68,7 @@ interface Error {
 type FooResponse = Response<Foo | Error>;
 // res's type limits what responses this request handler can send
 // it must send either an object with a message or an error
-app.get("/books", async (req, res) => {
+app.get("/api/books", async (req, res) => {
     const {id, title, author, genre, pub_year} = req.query;
     let query = "SELECT * FROM books";
     let filters = [];
@@ -130,7 +130,7 @@ app.get("/books", async (req, res) => {
 });
 
 
-app.post("/books", async (req, res: Response) =>{
+app.post("/api/books", async (req, res: Response) =>{
     const {title, author_id, genre, pub_year} = req.body;
     let vals = [author_id, title, pub_year, genre];
     let statement = await db.prepare(
@@ -155,7 +155,7 @@ app.delete("/foo", (req, res) => {
     res.sendStatus(200);
 });
 
-app.delete("/books/:id", async (req, res: Response) => {
+app.delete("/api/books/:id", async (req, res: Response) => {
     try{
         let id = req.params.id;
         await db.run(`DELETE FROM books WHERE id = '${id}'`);
