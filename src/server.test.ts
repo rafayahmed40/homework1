@@ -17,6 +17,21 @@ test("GET /books?id gets book by id", async () => {
 });
 
 
+test("PUT /books/edit/:id edits book's info", async ()=> {
+    let id = "1";
+    let newData = {
+        author_id : "1",
+        title : "New Book",
+        pub_year : "1999",
+        genre : "Horror"
+    }
+    let { data } = await axios.put(`${baseUrl}/books/edit/${id}`, newData);
+    let resTitle = data['data']['title'];
+    expect(newData.title).toEqual(resTitle);
+
+})
+
+
 test("POST /books adds book to DB", async () => {
     let data = {
         author_id : "1",

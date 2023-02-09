@@ -155,6 +155,52 @@ app.delete("/foo", (req, res) => {
     res.sendStatus(200);
 });
 
+app.get('/books/checkBook/:id', async (req, res: Response) => {
+    const bookId = req.params.id;
+    console.log(bookId);
+  
+    try {
+      const book = await db.get(
+        'SELECT * FROM books WHERE id = $bookId',
+        { $bookId: bookId }
+      );
+  
+      if (!book) {
+        return res.status(404).send({ message: 'Book not found' });
+      }
+  
+      return res.status(200).json({ book });
+    } catch (error) {
+      return res.status(500).send({ message: 'Error retrieving book' });
+    }
+  });
+
+
+
+app.put('/books/edit/:id', async (req, res: Response) => {
+    console.log(req.body);
+    const { author_id, title, pub_year, genre } = req.body;
+    const bookId = req.params.id;
+    try {
+        const result = await db.run(
+            `UPDATE books SET author_id = $author_id, title = $title, pub_year = $pub_year, genre = $genre WHERE id = $bookId`,
+            { $author_id: author_id, $title: title, $pub_year: pub_year, $genre: genre, $bookId: bookId }
+          );
+  
+      if (result.changes === 0) {
+        return res.status(404).send({ message: 'Book not found' });
+      }
+      const book = await db.get(
+        'SELECT * FROM books WHERE id = $bookId',
+        { $bookId: bookId }
+      );
+      
+      return res.status(200).json({ data: book });
+    } catch (error) {
+      return res.status(500).send({ message: 'Error updating book' });
+    }
+});
+
 app.delete("/api/books/:id", async (req, res: Response) => {
     try{
         let id = req.params.id;
