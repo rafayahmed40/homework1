@@ -1,4 +1,6 @@
 import React, {useState, useEffect} from 'react';
+import { isLoggedIn, setIsLoggedIn } from './Login';
+
 import './App.css';
 
 interface SearchResult {
@@ -22,6 +24,11 @@ interface Book {
   pub_year: string;
   author_id: string;
   genre: string;
+}
+
+function handleLogin(val: boolean) {
+  // Perform some login logic
+  setIsLoggedIn(val);
 }
 
 
@@ -247,18 +254,96 @@ function BookForm() {
   );
 };
 
+function LoginForm(): JSX.Element {
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+
+  function handleUsernameChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    setUsername(event.target.value);
+  }
+
+  function handlePasswordChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    setPassword(event.target.value);
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+  
+    fetch('http://localhost:3000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
+    })
+      .then((response) => {
+        if (response.status === 200) {
+          alert("logged in succesfully");
+        } else {
+          alert('Failed to login');
+        }
+      })
+      
+      .catch((error) => {
+        console.error('There was a problem with the fetch operation:', error);
+      });
+  }
+
+  return (
+    <div className="login-form">
+      <h1>Login</h1>
+      <form onSubmit={handleSubmit}>
+        <label>
+          Username:
+          <input type="text" value={username} onChange={handleUsernameChange} />
+        </label>
+        <label>
+          Password:
+          <input type="password" value={password} onChange={handlePasswordChange} />
+        </label>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  );
+}
+
+function ShowForm(): JSX.Element {
+  const [showLoginForm, setShowLoginForm] = useState<boolean>(false);
+
+  function handleLoginClick(): void {
+    setShowLoginForm(true);
+  }
+
+  return (
+    <div className="app">
+      <header>
+        <nav>
+          <ul>
+            <li><button onClick={handleLoginClick}>Log In</button></li>
+          </ul>
+        </nav>
+      </header>
+
+      {showLoginForm && <LoginForm />}
+    </div>
+  );
+}
 
 
 
-function App(){
+
+function App() {
   return (
     <div>
-      <h1>
-      Books Catalog
-    </h1>
-    <Search/>
-    <DisplayTable/>
-    <BookForm/>
+      <h1>Books Catalog</h1>
+      <ShowForm/>
+      {isLoggedIn && (
+        <>
+          <Search />
+          <DisplayTable />
+        </>
+      )}
+      <BookForm />
     </div>
   );
 }
