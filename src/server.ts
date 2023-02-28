@@ -2,11 +2,25 @@ import express, { Response } from "express";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import * as url from "url";
+import argon2 from 'argon2';
+import { randomBytes } from 'crypto';
+
+let rateLimiter = require("express-rate-limit");
+let helmet = require("helmet");
 
 let app = express();
 app.use(express.json());
 app.use(express.static("public"));
+app.use(helmet());
 
+
+
+let limiter = rateLimiter({
+    windowMs: 10 * 6000,
+    max: 10,
+    message: "Login attempts increased limit. Try again later."
+
+})
 // create database "connection"
 // use absolute path to avoid this issue
 // https://github.com/TryGhost/node-sqlite3/issues/441
@@ -18,6 +32,7 @@ let db = await open({
 });
 await db.get("PRAGMA foreign_keys = ON");
 
+
 //
 // SQLITE EXAMPLES
 // comment these out or they'll keep inserting every time you run your server
@@ -25,6 +40,12 @@ await db.get("PRAGMA foreign_keys = ON");
 // this will keep inserting a row with the same primary key
 // but the primary key should be unique
 //
+
+//Add credentials to users tables
+let testPassword = "test";
+let testUsername = "rafay" 
+let hashed = await argon2.hash(testPassword);
+await db.run("INSERT INTO users (username, pwd) VALUES ($1, $2) RETURNING *", [testUsername, hashed])
 
 // insert example
 await db.run(
@@ -129,8 +150,35 @@ app.get("/api/books", async (req, res) => {
     }
 });
 
-app.post("/login", async (req, res: Response) => {
-    return res.status(200).send({ message: 'Book not found' });
+function generateToken(length = 32): string {
+    return randomBytes(length).toString('hex');
+}
+
+app.post("/login", limiter, async (req, res: Response) => {
+    try{
+        let {username, password} = req.body;
+        console.log(username, password);
+        //let hash = await argon2.hash(password);
+        const user = await db.all("SELECT * FROM users WHERE username = $1", [username]);
+        if (user.length === 0){
+            return res.status(404).send({message: "User not found"});
+        }
+        else{
+            let hash = user[0].pwd;
+            let activeUser: boolean = await argon2.verify(hash, password);
+            if (activeUser){
+                const token = generateToken();
+                res.setHeader('Set-Cookie', `token=${token}; HttpOnly`);
+                return res.status(200).send({message: "Logged in succesfully"});
+            }
+            else{
+                return res.status(404);
+            }
+        }
+    }
+    catch(err){
+        return res.status(404).send({message: "Invalid Credentials"});
+    }
 })
 
 

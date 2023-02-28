@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import { isLoggedIn, setIsLoggedIn } from './Login';
+import { Response } from 'express';
 
 import './App.css';
 
@@ -277,7 +278,9 @@ function LoginForm(): JSX.Element {
       body: JSON.stringify({ username, password }),
     })
       .then((response) => {
+        console.log(response);
         if (response.status === 200) {
+          
           alert("logged in succesfully");
         } else {
           alert('Failed to login');

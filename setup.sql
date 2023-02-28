@@ -13,7 +13,7 @@ CREATE TABLE authors (
     bio TEXT
 );
 
-CREATE TABLE users {
+CREATE TABLE users (
     username TEXT PRIMARY KEY,
     pwd PASSWORD
-}
+);
