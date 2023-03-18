@@ -3,33 +3,32 @@ let port = 3000;
 let host = "localhost";
 let protocol = "http";
 let baseUrl = `${protocol}://${host}:${port}`;
-test("GET /foo?bar returns message", async () => {
-    let bar = "xyzzy";
-    let { data } = await axios.get(`${baseUrl}/foo?bar=${bar}`);
-    expect(data).toEqual({ message: `You sent: ${bar} in the query` });
+test("GET /books?id gets book by id", async () => {
+    let id = "1";
+    let { data } = await axios.get(`${baseUrl}/api/books?id=${id}`);
+    let title = "My Fairest Lady";
+    let resTitle = data['response'][0]['title'];
+    expect(title).toEqual(resTitle);
 });
-test("GET /foo returns error", async () => {
-    try {
-        await axios.get(`${baseUrl}/foo`);
-    }
-    catch (error) {
-        // casting needed b/c typescript gives errors "unknown" type
-        let errorObj = error;
-        // if server never responds, error.response will be undefined
-        // throw the error so typescript can perform type narrowing
-        if (errorObj.response === undefined) {
-            throw errorObj;
-        }
-        // now, after the if-statement, typescript knows
-        // that errorObj can't be undefined
-        let { response } = errorObj;
-        // TODO this test will fail, replace 300 with 400
-        expect(response.status).toEqual(300);
-        expect(response.data).toEqual({ error: "bar is required" });
-    }
+test("POST /books adds book to DB", async () => {
+    let data = {
+        author_id: "1",
+        title: "New Book",
+        pub_year: "1999",
+        genre: "Horror"
+    };
+    let result = await axios.post(`${baseUrl}/api/books`, data);
+    let newId = result.data.id;
+    Object.assign(data, { 'id': newId });
+    let response = result.data.response;
+    console.log(response);
+    expect(response).toContainEqual(data);
 });
-test("POST /bar works good", async () => {
-    let bar = "xyzzy";
-    let result = await axios.post(`${baseUrl}/foo`, { bar });
-    expect(result.data).toEqual({ message: `You sent: ${bar} in the body` });
+test("DELETE /books/id deletes the book", async () => {
+    let id = 1;
+    let result = await axios.delete(`${baseUrl}/api/books/${id}`);
+    let response = result.data.response;
+    for (let i = 0; i < response.length; i++) {
+        expect(response[i]).not.toContain({ id: 1 });
+    }
 });

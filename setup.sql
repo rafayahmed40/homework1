@@ -12,3 +12,8 @@ CREATE TABLE authors (
     name TEXT,
     bio TEXT
 );
+
+CREATE TABLE users (
+    username TEXT PRIMARY KEY,
+    pwd PASSWORD
+);
